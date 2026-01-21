@@ -1,0 +1,109 @@
+"use client";
+
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Moon, Sun } from "lucide-react";
+import { flushSync } from "react-dom";
+
+import { cn } from "@/lib/utils";
+
+interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<"button"> {
+  duration?: number;
+}
+
+export const AnimatedThemeToggler = ({
+  className,
+  duration = 400,
+  ...props
+}: AnimatedThemeTogglerProps) => {
+  const [isDark, setIsDark] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (savedTheme === "light") {
+      document.documentElement.classList.remove("dark");
+    }
+
+    const updateTheme = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleTheme = useCallback(async () => {
+    if (!buttonRef.current) return;
+
+    const newTheme = !isDark;
+    const applyTheme = () => {
+      flushSync(() => {
+        setIsDark(newTheme);
+        document.documentElement.classList.toggle("dark", newTheme);
+        localStorage.setItem("theme", newTheme ? "dark" : "light");
+      });
+    };
+
+    const startViewTransition = (
+      document as Document & {
+        startViewTransition?: (callback: () => void) => { ready: Promise<void> };
+      }
+    ).startViewTransition;
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (!startViewTransition || prefersReducedMotion) {
+      applyTheme();
+      return;
+    }
+
+    await startViewTransition(applyTheme).ready;
+
+    const { top, left, width, height } =
+      buttonRef.current.getBoundingClientRect();
+    const x = left + width / 2;
+    const y = top + height / 2;
+    const maxRadius = Math.hypot(
+      Math.max(left, window.innerWidth - left),
+      Math.max(top, window.innerHeight - top),
+    );
+
+    document.documentElement.animate(
+      {
+        clipPath: [
+          `circle(0px at ${x}px ${y}px)`,
+          `circle(${maxRadius}px at ${x}px ${y}px)`,
+        ],
+      },
+      {
+        duration,
+        easing: "ease-in-out",
+        pseudoElement: "::view-transition-new(root)",
+      } as KeyframeAnimationOptions & { pseudoElement?: string },
+    );
+  }, [isDark, duration]);
+
+  return (
+    <button
+      ref={buttonRef}
+      type={props.type ?? "button"}
+      onClick={toggleTheme}
+      className={cn(className)}
+      {...props}>
+      {isDark ? <Sun /> : <Moon />}
+      <span className="sr-only">Toggle theme</span>
+    </button>
+  );
+};
