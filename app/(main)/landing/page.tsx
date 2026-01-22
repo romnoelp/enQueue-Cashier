@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogPanel,
@@ -19,6 +20,7 @@ import { StationsList } from "@/app/(main)/landing/_components/stations-list";
 import { StationCountersDialog } from "@/app/(main)/landing/_components/station-counters-dialog";
 
 const Landing = () => {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [stations, setStations] = useState<Station[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -189,13 +191,31 @@ const Landing = () => {
           );
         }
 
+        const body = (await res.json().catch(() => null)) as {
+          counter?: Counter;
+        } | null;
+        const enteredCounter = body?.counter;
+        const counterNumber = enteredCounter?.number;
+        const stationId = enteredCounter?.stationId ?? selectedStation?.id;
+        const stationName = selectedStation?.name;
+
+        const params = new URLSearchParams();
+        params.set("counterId", counterId);
+        if (typeof counterNumber === "number") {
+          params.set("counterNumber", String(counterNumber));
+        }
+        if (stationId) params.set("stationId", stationId);
+        if (stationName) params.set("stationName", stationName);
+
         setIsCountersOpen(false);
         setSelectedStation(null);
+
+        router.push(`/counter?${params.toString()}`);
       } finally {
         setEnteringCounterId(null);
       }
     },
-    [ensureIdToken],
+    [ensureIdToken, router, selectedStation?.id, selectedStation?.name],
   );
 
   const refreshStations = useCallback(async () => {

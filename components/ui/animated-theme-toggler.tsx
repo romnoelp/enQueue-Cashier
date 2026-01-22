@@ -14,6 +14,8 @@ interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<"butt
 export const AnimatedThemeToggler = ({
   className,
   duration = 400,
+  onClick,
+  type,
   ...props
 }: AnimatedThemeTogglerProps) => {
   const [isDark, setIsDark] = useState(false);
@@ -54,24 +56,22 @@ export const AnimatedThemeToggler = ({
       });
     };
 
-    const startViewTransition = (
-      document as Document & {
-        startViewTransition?: (callback: () => void) => {
-          ready: Promise<void>;
-        };
-      }
-    ).startViewTransition;
+    const doc = document as Document & {
+      startViewTransition?: (callback: () => void) => {
+        ready: Promise<void>;
+      };
+    };
 
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    if (!startViewTransition || prefersReducedMotion) {
+    if (!doc.startViewTransition || prefersReducedMotion) {
       applyTheme();
       return;
     }
 
-    await startViewTransition(applyTheme).ready;
+    await doc.startViewTransition(applyTheme).ready;
 
     const { top, left, width, height } =
       buttonRef.current.getBoundingClientRect();
@@ -99,11 +99,16 @@ export const AnimatedThemeToggler = ({
 
   return (
     <button
+      {...props}
       ref={buttonRef}
-      type={props.type ?? "button"}
-      onClick={toggleTheme}
-      className={cn(className)}
-      {...props}>
+      type={type ?? "button"}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) {
+          void toggleTheme();
+        }
+      }}
+      className={cn(className)}>
       {isDark ? <Sun /> : <Moon />}
       <span className="sr-only">Toggle theme</span>
     </button>

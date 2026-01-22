@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { HomeIcon, LogOut, SettingsIcon } from "lucide-react";
+import { HomeIcon, LayoutGrid, LogOut, SettingsIcon } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import { Dock, DockIcon } from "@/components/ui/dock";
 const DATA = {
   navbar: [
     { href: "/landing", icon: HomeIcon, label: "Landing" },
+    { href: "/counter", icon: LayoutGrid, label: "Counter" },
     { href: "/settings", icon: SettingsIcon, label: "Settings" },
   ],
 } as const;
