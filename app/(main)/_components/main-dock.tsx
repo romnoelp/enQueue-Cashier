@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { HomeIcon, LayoutGrid, LogOut, SettingsIcon } from "lucide-react";
-import { signOut } from "next-auth/react";
 
 import { cn } from "@/lib/utils";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
@@ -16,6 +15,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Dock, DockIcon } from "@/components/ui/dock";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/config/firebase";
+import { useRouter } from "next/navigation";
 
 const DATA = {
   navbar: [
@@ -26,6 +28,7 @@ const DATA = {
 } as const;
 
 export const MainDock = () => {
+  const router = useRouter();
   return (
     <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
       <TooltipProvider>
@@ -77,7 +80,8 @@ export const MainDock = () => {
                   type="button"
                   aria-label="Sign out"
                   onClick={async () => {
-                    await signOut({ redirectTo: "/" });
+                    await signOut(auth);
+                    router.replace("/")
                   }}
                   className={cn(
                     buttonVariants({ variant: "ghost", size: "icon" }),

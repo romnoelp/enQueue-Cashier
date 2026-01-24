@@ -6,10 +6,6 @@ import {
   Dialog,
   DialogPanel,
 } from "@/components/animate-ui/components/headless/dialog";
-import {
-  getFirebaseAuth,
-  signInToFirebaseWithCustomToken,
-} from "@/lib/firebase/client";
 
 import type { Station } from "@/types/station";
 import type { Counter, CountersResponse } from "@/types/backend";
@@ -35,113 +31,112 @@ const Landing = () => {
     null,
   );
 
-  const ensureIdToken = useCallback(async () => {
-    const auth = getFirebaseAuth();
+  // const ensureIdToken = useCallback(async () => {
 
-    if (auth.currentUser) {
-      return await auth.currentUser.getIdToken();
-    }
+  //   if (auth.currentUser) {
+  //     return await auth.currentUser.getIdToken();
+  //   }
 
-    const tokenRes = await fetch("/api/firebase/custom-token", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
+  //   const tokenRes = await fetch("/api/firebase/custom-token", {
+  //     method: "GET",
+  //     headers: { "Content-Type": "application/json" },
+  //   });
 
-    if (!tokenRes.ok) {
-      const body = (await tokenRes.json().catch(() => null)) as {
-        message?: string;
-      } | null;
-      throw new Error(body?.message ?? "Failed to get Firebase custom token");
-    }
+  //   if (!tokenRes.ok) {
+  //     const body = (await tokenRes.json().catch(() => null)) as {
+  //       message?: string;
+  //     } | null;
+  //     throw new Error(body?.message ?? "Failed to get Firebase custom token");
+  //   }
 
-    const tokenBody = (await tokenRes.json()) as { customToken: string };
-    const user = await signInToFirebaseWithCustomToken(
-      auth,
-      tokenBody.customToken,
-    );
-    return await user.getIdToken();
-  }, []);
+  //   const tokenBody = (await tokenRes.json()) as { customToken: string };
+  //   const user = await signInToFirebaseWithCustomToken(
+  //     auth,
+  //     tokenBody.customToken,
+  //   );
+  //   return await user.getIdToken();
+  // }, []);
 
-  const fetchStations = useCallback(async () => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseUrl) {
-      throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-    }
+  // const fetchStations = useCallback(async () => {
+  //   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  //   if (!baseUrl) {
+  //     throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
+  //   }
 
-    const idToken = await ensureIdToken();
+  //   const idToken = await ensureIdToken();
 
-    const res = await fetch(`${baseUrl}/stations?limit=50`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
+  //   const res = await fetch(`${baseUrl}/stations?limit=50`, {
+  //     method: "GET",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //       Authorization: `Bearer ${idToken}`,
+  //     },
+  //   });
 
-    if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as {
-        message?: string;
-      } | null;
-      throw new Error(
-        body?.message ?? `Failed to load stations (${res.status})`,
-      );
-    }
+  //   if (!res.ok) {
+  //     const body = (await res.json().catch(() => null)) as {
+  //       message?: string;
+  //     } | null;
+  //     throw new Error(
+  //       body?.message ?? `Failed to load stations (${res.status})`,
+  //     );
+  //   }
 
-    const data = (await res.json()) as {
-      stations: Array<{ id: string; name: string; description?: string }>;
-      nextCursor: string | null;
-    };
+  //   const data = (await res.json()) as {
+  //     stations: Array<{ id: string; name: string; description?: string }>;
+  //     nextCursor: string | null;
+  //   };
 
-    // Backend stations currently don't include UI fields like status/avgWait.
-    const mapped: Station[] = data.stations.map((s) => ({
-      id: s.id,
-      name: s.name,
-      location: s.description,
-      status: "Active",
-      avgWaitMins: 0,
-    }));
+  //   // Backend stations currently don't include UI fields like status/avgWait.
+  //   const mapped: Station[] = data.stations.map((s) => ({
+  //     id: s.id,
+  //     name: s.name,
+  //     location: s.description,
+  //     status: "Active",
+  //     avgWaitMins: 0,
+  //   }));
 
-    setStations(mapped);
-    setLastUpdatedAt(new Date());
-  }, [ensureIdToken]);
+  //   setStations(mapped);
+  //   setLastUpdatedAt(new Date());
+  // }, [ensureIdToken]);
 
-  const fetchCountersForStation = useCallback(
-    async (stationId: string) => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-      if (!baseUrl) {
-        throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-      }
+  // const fetchCountersForStation = useCallback(
+  //   async (stationId: string) => {
+  //     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  //     if (!baseUrl) {
+  //       throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
+  //     }
 
-      const idToken = await ensureIdToken();
-      const url = new URL(`${baseUrl}/counters`);
-      url.searchParams.set("stationId", stationId);
-      url.searchParams.set("limit", "50");
+  //     const idToken = await ensureIdToken();
+  //     const url = new URL(`${baseUrl}/counters`);
+  //     url.searchParams.set("stationId", stationId);
+  //     url.searchParams.set("limit", "50");
 
-      const res = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+  //     const res = await fetch(url.toString(), {
+  //       method: "GET",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${idToken}`,
+  //       },
+  //     });
 
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(
-          body?.message ?? `Failed to load counters (${res.status})`,
-        );
-      }
+  //     if (!res.ok) {
+  //       const body = (await res.json().catch(() => null)) as {
+  //         message?: string;
+  //       } | null;
+  //       throw new Error(
+  //         body?.message ?? `Failed to load counters (${res.status})`,
+  //       );
+  //     }
 
-      const data = (await res.json()) as CountersResponse;
-      const filtered = (data.counters ?? []).filter(
-        (c) => c.stationId === stationId,
-      );
-      setCounters(filtered);
-    },
-    [ensureIdToken],
-  );
+  //     const data = (await res.json()) as CountersResponse;
+  //     const filtered = (data.counters ?? []).filter(
+  //       (c) => c.stationId === stationId,
+  //     );
+  //     setCounters(filtered);
+  //   },
+  //   [ensureIdToken],
+  // );
 
   const openCountersForStation = useCallback(
     async (station: Station) => {
@@ -152,7 +147,9 @@ const Landing = () => {
       setIsCountersLoading(true);
 
       try {
-        await fetchCountersForStation(station.id);
+        // Mock implementation - replace with actual API call later
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setCounters([]);
       } catch (e: unknown) {
         const message =
           e instanceof Error ? e.message : "Failed to load counters";
@@ -161,51 +158,20 @@ const Landing = () => {
         setIsCountersLoading(false);
       }
     },
-    [fetchCountersForStation],
+    [],
   );
 
   const enterCounter = useCallback(
     async (counterId: string) => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-      if (!baseUrl) {
-        throw new Error("Missing NEXT_PUBLIC_API_BASE_URL");
-      }
-      const idToken = await ensureIdToken();
-
       setEnteringCounterId(counterId);
       try {
-        const res = await fetch(`${baseUrl}/counters/${counterId}/enter`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
-
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as {
-            message?: string;
-          } | null;
-          throw new Error(
-            body?.message ?? `Failed to enter counter (${res.status})`,
-          );
-        }
-
-        const body = (await res.json().catch(() => null)) as {
-          counter?: Counter;
-        } | null;
-        const enteredCounter = body?.counter;
-        const counterNumber = enteredCounter?.number;
-        const stationId = enteredCounter?.stationId ?? selectedStation?.id;
-        const stationName = selectedStation?.name;
-
+        // Mock implementation - replace with actual API call later
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const params = new URLSearchParams();
         params.set("counterId", counterId);
-        if (typeof counterNumber === "number") {
-          params.set("counterNumber", String(counterNumber));
-        }
-        if (stationId) params.set("stationId", stationId);
-        if (stationName) params.set("stationName", stationName);
+        if (selectedStation?.id) params.set("stationId", selectedStation.id);
+        if (selectedStation?.name) params.set("stationName", selectedStation.name);
 
         setIsCountersOpen(false);
         setSelectedStation(null);
@@ -215,14 +181,16 @@ const Landing = () => {
         setEnteringCounterId(null);
       }
     },
-    [ensureIdToken, router, selectedStation?.id, selectedStation?.name],
+    [router, selectedStation?.id, selectedStation?.name],
   );
 
   const refreshStations = useCallback(async () => {
     setIsRefreshing(true);
     setLoadError(null);
     try {
-      await fetchStations();
+      // Mock implementation - replace with actual API call later
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLastUpdatedAt(new Date());
     } catch (e: unknown) {
       const message =
         e instanceof Error ? e.message : "Failed to refresh stations";
@@ -230,7 +198,7 @@ const Landing = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchStations]);
+  }, []);
 
   useEffect(() => {
     void refreshStations();
