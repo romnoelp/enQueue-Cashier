@@ -26,12 +26,14 @@ type CounterListProps = {
   onQueryChange: (value: string) => void;
   filteredCounters: Counter[];
   onOpenCounters: (station: Station) => void;
+  onCounterClick?: (counter: Counter) => void;
 };
 
 export function CounterList({
   query,
   onQueryChange,
   filteredCounters,
+  onCounterClick,
 }: CounterListProps) {
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
@@ -47,7 +49,7 @@ export function CounterList({
             <input
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="Search stations…"
+              placeholder="Search counters"
               className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
           </div>
@@ -64,11 +66,15 @@ export function CounterList({
                 const occupied = isOccupied(counter);
                 return (
                   <div key={counter.id}>
-                    <Card className="py-4 shadow-sm">
+                    <Card
+                      className="cursor-pointer py-4 shadow-sm transition-colors hover:bg-muted/50"
+                      onClick={() => onCounterClick?.(counter)}
+                    >
                       <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold tabular-nums">
+                              {counter.number ?? "—"}
                             </span>
                             <span className="text-muted-foreground">
                               Counter {counter.number}

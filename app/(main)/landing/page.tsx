@@ -12,40 +12,43 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
 import { isAxiosError } from "axios";
+import { toast } from "sonner";
 
-import type { Station } from "@/types/station";
 import type { Counter, CountersResponse } from "@/types/backend";
 
 import { CounterList } from "@/app/(main)/landing/_components/counters";
-import { StationCountersDialog } from "@/app/(main)/landing/_components/station-counters-dialog";
 import { api } from "@/lib/config/api";
 import { useCashierUserContext } from "@/lib/cashier-user-context";
+import { useRouter } from "next/navigation";
+
+function isOccupied(counter: Counter): boolean {
+  return counter.cashierUid != null && counter.cashierUid !== "";
+}
 
 const Landing = () => {
   const [query, setQuery] = useState("");
   const [counters, setCounters] = useState<Counter[]>([]);
   const [isCountersLoading, setIsCountersLoading] = useState(false);
-  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [isCountersOpen, setIsCountersOpen] = useState(false);
-  const [enteringCounterId, setEnteringCounterId] = useState<string | null>(
-    null,
-  );
-  const [countersError, setCountersError] = useState<string | null>(null);
+  const [selectedCounter, setSelectedCounter] = useState<Counter | null>(null);
+  const [isEntering, setIsEntering] = useState(false);
   const user = useCashierUserContext();
   const stationId = user?.stationId ?? null;
-  console.log("stationId", stationId
 
-  )
+  const router = useRouter();
+
+
 
   useEffect(() => {
     const getCounters = async () => {
       if (!stationId) return;
       setIsCountersLoading(true);
-      setCountersError(null);
       try {
         const { data } = await api.get<CountersResponse>(
           `/counters/${stationId}`,
@@ -57,7 +60,7 @@ const Landing = () => {
             err.message ??
             "Failed to load counters")
           : "Failed to load counters";
-        setCountersError(message);
+        toast.error(message);
       } finally {
         setIsCountersLoading(false);
       }
@@ -72,7 +75,6 @@ const Landing = () => {
           const q = query.trim().toLowerCase();
           return counters.filter(
             (c) =>
-              c.id?.toLowerCase().includes(q) ||
               String(c.number ?? "").includes(q),
           );
         })();
@@ -82,6 +84,32 @@ const Landing = () => {
       return nb - na;
     });
   }, [counters, query]);
+
+  const handleCounterClick = (counter: Counter) => {
+    setSelectedCounter(counter);
+    setIsCountersOpen(true);
+  };
+
+  const handleEnterCounter = async () => {
+    const counterId = selectedCounter?.id;
+    if (!counterId) return;
+    setIsEntering(true);
+    try {
+      await api.post(`/counters/${counterId}/enter`);
+      setIsCountersOpen(false);
+      setSelectedCounter(null);
+      const { data } = await api.get<CountersResponse>(`/counters/${stationId}`);
+      setCounters(data.counters ?? []);
+      router.replace(`/counter?counterId=${counterId}`);
+    } catch (err) {
+      const message = isAxiosError(err)
+        ? (err.response?.data?.message ?? err.message ?? "Failed to enter counter")
+        : "Failed to enter counter";
+      toast.error(message);
+    } finally {
+      setIsEntering(false);
+    }
+  };
 
   return (
     <div className="h-[calc(100dvh-96px)] w-full overflow-hidden p-12">
@@ -100,7 +128,7 @@ const Landing = () => {
           <Card className="flex min-h-0 flex-1 flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Counters</CardTitle>
-              <CardDescription>.</CardDescription>
+              <CardDescription></CardDescription>
             </CardHeader>
             <Separator />
             <CardContent className="min-h-0 flex-1 pt-6">
@@ -118,7 +146,7 @@ const Landing = () => {
           <Card className="flex min-h-0 flex-1 flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Counters</CardTitle>
-              <CardDescription>.</CardDescription>
+              <CardDescription></CardDescription>
             </CardHeader>
             <Separator />
             <CardContent className="min-h-0 flex-1 pt-6">
@@ -138,6 +166,7 @@ const Landing = () => {
             onQueryChange={setQuery}
             filteredCounters={filteredCounters}
             onOpenCounters={() => {}}
+            onCounterClick={handleCounterClick}
           />
         )}
 
@@ -145,17 +174,39 @@ const Landing = () => {
           open={isCountersOpen}
           onClose={() => {
             setIsCountersOpen(false);
+            setSelectedCounter(null);
           }}
         >
-          <DialogPanel className="sm:max-w-2xl">
-            <StationCountersDialog
-              selectedStation={selectedStation}
-              counters={counters}
-              isLoading={isCountersLoading}
-              error={countersError}
-              enteringCounterId={enteringCounterId}
-              onEnterCounter={(counterId) => setEnteringCounterId(counterId)}
-            />
+          <DialogPanel className="sm:max-w-md">
+            {selectedCounter && (
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Counter {selectedCounter.number ?? selectedCounter.id}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Status:{" "}
+                    <Badge
+                      variant={isOccupied(selectedCounter) ? "secondary" : "outline"}
+                      className={
+                        isOccupied(selectedCounter)
+                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                          : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      }
+                    >
+                      {isOccupied(selectedCounter) ? "Occupied" : "Open"}
+                    </Badge>
+                  </p>
+                </div>
+                <Button
+                  onClick={handleEnterCounter}
+                  disabled={isEntering}
+                  className="text-white"
+                >
+                  {isEntering ? "Entering…" : "Enter"}
+                </Button>
+              </div>
+            )}
           </DialogPanel>
         </Dialog>
       </div>

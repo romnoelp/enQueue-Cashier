@@ -5,11 +5,12 @@ import { ArrowRight, ChevronRight } from "lucide-react";
 import { LiquidButton } from "@/components/animate-ui/primitives/buttons/liquid";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import ConcentricLoader from "@/components/mvpblocks/concentric-loader";
 import { signInWithGoogle } from "@/lib/auth/signInWithGoogle";
 
 export default function GradientHero() {
-  const [clicked, setClicked] = useState<boolean>(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [showIntro, setShowIntro] = useState<boolean>(true);
 
   useEffect(() => {
@@ -21,30 +22,34 @@ export default function GradientHero() {
     return () => clearTimeout(timer);
   }, []);
 
-  const renderButton = () => {
-    if (!clicked) {
-      return (
-        <LiquidButton
-          onClick={async () => {
-            try {
-              setClicked(true);
-              await signInWithGoogle();
-            } catch (error) {
-              console.error(error);
-              setClicked(false);
-            }
-          }}
-          className="group bg-primary text-primary-foreground hover:shadow-primary/30 relative overflow-hidden rounded-full px-6 shadow-lg transition-all duration-300">
-          <span className="relative z-10 flex items-center">
-            Sign in with your .edu email
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </span>
-          <span className="from-primary via-primary/90 to-primary/80 absolute inset-0 z-0 bg-linear-to-r opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
-        </LiquidButton>
-      );
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Sign-in failed. Please try again.";
+      toast.error(message);
+    } finally {
+      setIsSigningIn(false);
     }
+  };
 
-    return <ConcentricLoader />;
+  const renderButton = () => {
+    if (isSigningIn) {
+      return <ConcentricLoader />;
+    }
+    return (
+      <LiquidButton
+        onClick={handleSignIn}
+        className="group bg-primary text-primary-foreground hover:shadow-primary/30 relative overflow-hidden rounded-full px-6 shadow-lg transition-all duration-300">
+        <span className="relative z-10 flex items-center">
+          Sign in with your .edu email
+          <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+        </span>
+        <span className="from-primary via-primary/90 to-primary/80 absolute inset-0 z-0 bg-linear-to-r opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
+      </LiquidButton>
+    );
   };
 
   return (

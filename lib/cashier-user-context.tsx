@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/config/firebase";
 import axios, { isAxiosError } from "axios";
+import { Counter } from "@/types";
 
 export type CashierUser = {
   uid: string;
@@ -18,7 +19,9 @@ export type CashierUser = {
 
 const NO_PROVIDER = Symbol("CashierUserContext.noProvider");
 
-export const CashierUserContext = createContext<CashierUser | null | typeof NO_PROVIDER>(NO_PROVIDER);
+export const CashierUserContext = createContext<
+  CashierUser | null | typeof NO_PROVIDER
+>(NO_PROVIDER);
 
 export function useCashierUserContext(): CashierUser | null {
   const ctx = useContext(CashierUserContext);
@@ -54,12 +57,26 @@ export function CashierUserProvider({
             headers: { Authorization: `Bearer ${idToken}` },
           },
         );
-
         const userBody = response.data?.user as CashierUser | undefined;
         if (userBody) {
           setCashierUser(userBody);
+
+          let counter: Counter[] | null = null;
+          if (userBody.stationId) {
+            const counterRes = await axios.post(
+              `${process.env.NEXT_PUBLIC_FUNCTIONS_BASE_URL}/counters/assigned`,
+              { uid: user.uid },
+              { headers: { Authorization: `Bearer ${idToken}` } },
+            );
+            counter = counterRes.data?.counters ?? null;
+          }
+
           if (pathname === "/") {
-            router.replace("/landing");
+            router.replace(
+              counter && counter?.length > 0
+                ? `/counter?counterId=${counter[0].id}`
+                : "/landing",
+            );
           }
         }
       } catch (error) {

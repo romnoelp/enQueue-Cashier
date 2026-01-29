@@ -11,7 +11,7 @@ export async function signInWithGoogle() {
     const result = await signInWithPopup(auth, provider);
     const idToken = await result.user.getIdToken(); 
 
-    await axios.get(`${process.env.NEXT_PUBLIC_FUNCTIONS_BASE_URL}/auth/me`, {
+    await axios.get(`${process.env.NEXT_PUBLIC_FUNCTIONS_BASE_URL}/auth/cashier/me`, {
         headers:{
             Authorization: `Bearer ${idToken}`
         }
