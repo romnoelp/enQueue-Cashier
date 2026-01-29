@@ -7,48 +7,10 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import ConcentricLoader from "@/components/mvpblocks/concentric-loader";
 import { signInWithGoogle } from "@/lib/auth/signInWithGoogle";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/config/firebase";
-import axios, { isAxiosError } from "axios";
-import { useRouter } from "next/navigation";
 
 export default function GradientHero() {
   const [clicked, setClicked] = useState<boolean>(false);
   const [showIntro, setShowIntro] = useState<boolean>(true);
-  const router = useRouter();
-  
-  useEffect(() => {
-    // Redirect to dashboard if already signed in and /auth/me accepts the user
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user == null) {
-        return;
-      }
-
-      try {
-        const idToken = await user.getIdToken();
-
-        await axios.get(`${process.env.NEXT_PUBLIC_FUNCTIONS_BASE_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-
-        router.replace("/landing");
-      } catch (error) {
-        
-        if (isAxiosError(error)) {
-          const status = error.response?.status;
-          if (status === 401 || status === 403) {
-            await signOut(auth);
-            router.replace("/");
-          } else {
-            console.error("/auth/me error:", error.response?.data ?? error.message);
-          }
-        } else {
-          console.error("/auth/me error:", error);
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
 
   useEffect(() => {
     // Show intro for 2 seconds, then transition to main page
@@ -63,7 +25,6 @@ export default function GradientHero() {
     if (!clicked) {
       return (
         <LiquidButton
-          size="lg"
           onClick={async () => {
             try {
               setClicked(true);

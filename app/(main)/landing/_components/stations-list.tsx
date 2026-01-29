@@ -11,12 +11,12 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
 import { LiquidButton } from "@/components/animate-ui/components/buttons/liquid";
 import { Badge } from "@/components/ui/badge";
 import { Clock, MapPin, Search, Users } from "lucide-react";
 
 import type { Station, StationStatus } from "@/types/station";
+import { Counter } from "@/types";
 
 function statusBadgeVariant(status: StationStatus) {
   switch (status) {
@@ -40,30 +40,26 @@ function statusDotClass(status: StationStatus) {
   }
 }
 
-type StationsListProps = {
+type CounterListProps = {
   query: string;
   onQueryChange: (value: string) => void;
-  isRefreshing: boolean;
-  stations: Station[];
-  filteredStations: Station[];
+  filteredCounters: Counter[];
   onOpenCounters: (station: Station) => void;
 };
 
-export function StationsList({
+export function CounterList({
   query,
   onQueryChange,
-  isRefreshing,
-  stations,
-  filteredStations,
+  filteredCounters,
   onOpenCounters,
-}: StationsListProps) {
+}: CounterListProps) {
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-base">All Stations</CardTitle>
-            <CardDescription>Search and manage your stations.</CardDescription>
+            <CardTitle className="text-base">Counters</CardTitle>
+            <CardDescription>.</CardDescription>
           </div>
 
           <div className="relative w-full sm:w-[320px]">
@@ -83,29 +79,22 @@ export function StationsList({
       <CardContent className="min-h-0 flex-1 pt-6">
         <ScrollArea className="h-full w-full">
           <div className="pr-4">
-            {isRefreshing && stations.length === 0 ? (
-              <div className="flex h-60 w-full items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Spinner className="size-4" />
-                Loading stations…
-              </div>
-            ) : null}
-
             <AnimatedList className="w-full items-stretch">
-              {filteredStations.map((station) => (
-                <div key={station.id}>
+              {filteredCounters.map((counter) => (
+                <div key={counter.id}>
                   <Card className="py-4 shadow-sm">
                     <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span
                             className={`size-2 shrink-0 rounded-full ${statusDotClass(
-                              station.status,
+                              counter.status,
                             )}`}
                             aria-hidden="true"
                           />
-                          <p className="truncate font-medium">{station.name}</p>
-                          <Badge variant={statusBadgeVariant(station.status)}>
-                            {station.status}
+                          <p className="truncate font-medium">{counter.name}</p>
+                          <Badge variant={statusBadgeVariant(counter.status)}>
+                            {counter.status}
                           </Badge>
                         </div>
 
@@ -153,9 +142,9 @@ export function StationsList({
               ))}
             </AnimatedList>
 
-            {!isRefreshing && filteredStations.length === 0 ? (
+            {filteredCounters.length === 0 ? (
               <div className="mt-6 rounded-lg border border-dashed p-8 text-center">
-                <p className="text-sm font-medium">No stations found</p>
+                <p className="text-sm font-medium">No counters found</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Try a different search term.
                 </p>
