@@ -57,8 +57,8 @@ function CounterPageInner() {
   );
   const [isServing, setIsServing] = useState(false);
   const [waitingList, setWaitingList] = useState<Queue[]>([]);
-  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
-  const [completeNotes, setCompleteNotes] = useState("");
+  const [markNoShowDialogOpen, setMarkNoShowDialogOpen] = useState(false);
+  const [markNoShowReason, setMarkNoShowReason] = useState("");
   const didFetchCurrentServing = useRef(false);
 
   const stationId = counter?.stationId ?? station?.id;
@@ -216,16 +216,10 @@ function CounterPageInner() {
     }
   };
 
-  const openCompleteDialog = () => setCompleteDialogOpen(true);
-
   const handleCompleteService = async () => {
     if (!currentServingQueue) return;
     try {
-      await api.post(`/queues/${currentServingQueue.id}/complete`, {
-        notes: completeNotes,
-      });
-      setCompleteDialogOpen(false);
-      setCompleteNotes("");
+      await api.post(`/queues/${currentServingQueue.id}/complete`);
       setCurrentServingQueue(null);
       setCurrentQueueNumber(null);
       setIsServing(false);
@@ -239,7 +233,11 @@ function CounterPageInner() {
   const handleMarkNoShow = async () => {
     if (!currentServingQueue) return;
     try {
-      await api.post(`/queues/${currentServingQueue.id}/mark-no-show`);
+      await api.post(`/queues/${currentServingQueue.id}/mark-no-show`, {
+        reason: markNoShowReason,
+      });
+      setMarkNoShowDialogOpen(false);
+      setMarkNoShowReason("");
       setCurrentServingQueue(null);
       setCurrentQueueNumber(null);
       setIsServing(false);
@@ -327,14 +325,14 @@ function CounterPageInner() {
             ) : (
               <>
                 <Button
-                  onClick={openCompleteDialog}
+                  onClick={handleCompleteService}
                   size="lg"
                   variant="default"
                   className="min-w-[140px]">
                   Complete Service
                 </Button>
                 <Button
-                  onClick={handleMarkNoShow}
+                  onClick={() => setMarkNoShowDialogOpen(true)}
                   size="lg"
                   variant="destructive"
                   className="min-w-[140px]">
@@ -347,27 +345,29 @@ function CounterPageInner() {
       </Card>
 
       <Dialog
-        open={completeDialogOpen}
+        open={markNoShowDialogOpen}
         onClose={() => {
-          setCompleteDialogOpen(false);
-          setCompleteNotes("");
-        }}>
+          setMarkNoShowDialogOpen(false);
+          setMarkNoShowReason("");
+        }}
+      >
         <DialogPanel className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Complete Service</DialogTitle>
+            <DialogTitle>Mark No Show</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <label
-              htmlFor="complete-notes"
-              className="text-sm font-medium leading-none">
-              Notes (optional)
+              htmlFor="mark-no-show-reason"
+              className="text-sm font-medium leading-none"
+            >
+              Reason (optional)
             </label>
             <input
-              id="complete-notes"
+              id="mark-no-show-reason"
               type="text"
-              value={completeNotes}
-              onChange={(e) => setCompleteNotes(e.target.value)}
-              placeholder="Add any notes…"
+              value={markNoShowReason}
+              onChange={(e) => setMarkNoShowReason(e.target.value)}
+              placeholder="Add reason…"
               className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
@@ -375,12 +375,13 @@ function CounterPageInner() {
             <Button
               variant="outline"
               onClick={() => {
-                setCompleteDialogOpen(false);
-                setCompleteNotes("");
-              }}>
+                setMarkNoShowDialogOpen(false);
+                setMarkNoShowReason("");
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleCompleteService}>Submit</Button>
+            <Button onClick={handleMarkNoShow}>Submit</Button>
           </DialogFooter>
         </DialogPanel>
       </Dialog>
