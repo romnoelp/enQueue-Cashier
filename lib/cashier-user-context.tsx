@@ -51,6 +51,7 @@ export function CashierUserProvider({
 
       try {
         const idToken = await user.getIdToken();
+        console.log(idToken)
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_FUNCTIONS_BASE_URL}/auth/cashier/me`,
           {

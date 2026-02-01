@@ -117,11 +117,8 @@ const Landing = () => {
       setSelectedCounter(null);
       const { data } = await api.get<CountersResponse>(`/counters/${stationId}`);
       setCounters(data.counters ?? []);
-      const stationIdParam = selectedCounter?.stationId ?? "";
-      const counterNumberParam =
-        selectedCounter?.number != null ? String(selectedCounter.number) : "";
       router.replace(
-        `/counter?stationId=${stationIdParam}&counterNumber=${counterNumberParam}`,
+        `/counter?counterId=${counterId}`,
       );
     } catch (err) {
       const message = isAxiosError(err)
