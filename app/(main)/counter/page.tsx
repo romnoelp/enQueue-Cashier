@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   collection,
@@ -28,6 +28,19 @@ import type { Station } from "@/types/station";
 import type { Queue } from "@/types/queue";
 
 export default function CounterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-center p-8">
+          <p className="text-sm text-muted-foreground">Loading counter…</p>
+        </div>
+      }>
+      <CounterPageInner />
+    </Suspense>
+  );
+}
+
+function CounterPageInner() {
   const user = useCashierUserContext();
   const searchParams = useSearchParams();
   const counterId = searchParams.get("counterId") ?? "";
@@ -36,8 +49,12 @@ export default function CounterPage() {
   const [station, setStation] = useState<Station | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentQueueNumber, setCurrentQueueNumber] = useState<string | null>(null);
-  const [currentServingQueue, setCurrentServingQueue] = useState<Queue | null>(null);
+  const [currentQueueNumber, setCurrentQueueNumber] = useState<string | null>(
+    null,
+  );
+  const [currentServingQueue, setCurrentServingQueue] = useState<Queue | null>(
+    null,
+  );
   const [isServing, setIsServing] = useState(false);
   const [waitingList, setWaitingList] = useState<Queue[]>([]);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -52,7 +69,7 @@ export default function CounterPage() {
     didFetchCurrentServing.current = true;
     (async () => {
       try {
-        const { data } = await api.get<{ currentServing : Queue | null }>(
+        const { data } = await api.get<{ currentServing: Queue | null }>(
           `/queues/counter/${counterId}/current-serving`,
         );
         const queue = data?.currentServing ?? null;
@@ -102,7 +119,9 @@ export default function CounterPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load counter");
+          setError(
+            err instanceof Error ? err.message : "Failed to load counter",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -132,7 +151,7 @@ export default function CounterPage() {
       (snapshot) => {
         const list: Queue[] = snapshot.docs.map((doc) => {
           const d = doc.data();
-          console.log(d)
+          console.log(d);
           return {
             id: doc.id,
             stationId: d.stationId ?? "",
@@ -211,7 +230,9 @@ export default function CounterPage() {
       setCurrentQueueNumber(null);
       setIsServing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to complete service");
+      setError(
+        err instanceof Error ? err.message : "Failed to complete service",
+      );
     }
   };
 
@@ -259,8 +280,7 @@ export default function CounterPage() {
               {waitingList.map((q) => (
                 <li
                   key={q.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                >
+                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                   <span className="font-mono font-medium">{q.queueNumber}</span>
                   <span className="text-muted-foreground">
                     Position {q.position}
@@ -331,8 +351,7 @@ export default function CounterPage() {
         onClose={() => {
           setCompleteDialogOpen(false);
           setCompleteNotes("");
-        }}
-      >
+        }}>
         <DialogPanel className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Complete Service</DialogTitle>
@@ -340,8 +359,7 @@ export default function CounterPage() {
           <div className="space-y-2">
             <label
               htmlFor="complete-notes"
-              className="text-sm font-medium leading-none"
-            >
+              className="text-sm font-medium leading-none">
               Notes (optional)
             </label>
             <input
@@ -359,8 +377,7 @@ export default function CounterPage() {
               onClick={() => {
                 setCompleteDialogOpen(false);
                 setCompleteNotes("");
-              }}
-            >
+              }}>
               Cancel
             </Button>
             <Button onClick={handleCompleteService}>Submit</Button>
