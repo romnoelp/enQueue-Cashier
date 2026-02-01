@@ -31,6 +31,23 @@ function isOccupied(counter: Counter): boolean {
   return counter.cashierUid != null && counter.cashierUid !== "";
 }
 
+function isOwnCounter(counter: Counter, userUid: string | undefined): boolean {
+  return (
+    userUid != null &&
+    counter.cashierUid != null &&
+    counter.cashierUid !== "" &&
+    counter.cashierUid === userUid
+  );
+}
+
+function canEnterCounter(
+  counter: Counter,
+  userUid: string | undefined,
+): boolean {
+  if (!isOccupied(counter)) return true;
+  return isOwnCounter(counter, userUid);
+}
+
 const Landing = () => {
   const [query, setQuery] = useState("");
   const [counters, setCounters] = useState<Counter[]>([]);
@@ -100,7 +117,12 @@ const Landing = () => {
       setSelectedCounter(null);
       const { data } = await api.get<CountersResponse>(`/counters/${stationId}`);
       setCounters(data.counters ?? []);
-      router.replace(`/counter?counterId=${counterId}`);
+      const stationIdParam = selectedCounter?.stationId ?? "";
+      const counterNumberParam =
+        selectedCounter?.number != null ? String(selectedCounter.number) : "";
+      router.replace(
+        `/counter?stationId=${stationIdParam}&counterNumber=${counterNumberParam}`,
+      );
     } catch (err) {
       const message = isAxiosError(err)
         ? (err.response?.data?.message ?? err.message ?? "Failed to enter counter")
@@ -167,6 +189,7 @@ const Landing = () => {
             filteredCounters={filteredCounters}
             onOpenCounters={() => {}}
             onCounterClick={handleCounterClick}
+            currentUserUid={user?.uid}
           />
         )}
 
@@ -189,18 +212,24 @@ const Landing = () => {
                     <Badge
                       variant={isOccupied(selectedCounter) ? "secondary" : "outline"}
                       className={
-                        isOccupied(selectedCounter)
-                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                          : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                        isOwnCounter(selectedCounter, user?.uid)
+                          ? "bg-blue-500/15 text-blue-700 dark:text-blue-400"
+                          : isOccupied(selectedCounter)
+                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                            : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                       }
                     >
-                      {isOccupied(selectedCounter) ? "Occupied" : "Open"}
+                      {isOwnCounter(selectedCounter, user?.uid)
+                        ? "Your counter"
+                        : isOccupied(selectedCounter)
+                          ? "Occupied"
+                          : "Open"}
                     </Badge>
                   </p>
                 </div>
                 <Button
                   onClick={handleEnterCounter}
-                  disabled={isEntering}
+                  disabled={isEntering || !canEnterCounter(selectedCounter, user?.uid)}
                   className="text-white"
                 >
                   {isEntering ? "Entering…" : "Enter"}

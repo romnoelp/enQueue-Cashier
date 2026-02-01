@@ -18,17 +18,50 @@ import { Dock, DockIcon } from "@/components/ui/dock";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/config/firebase";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/config/api";
+import { useCashierUserContext } from "@/lib/cashier-user-context";
+import type { CountersResponse } from "@/types/backend";
 
 const DATA = {
   navbar: [
-    { href: "/landing", icon: HomeIcon, label: "Landing" },
-    { href: "/counter", icon: LayoutGrid, label: "Counter" },
-    { href: "/settings", icon: SettingsIcon, label: "Settings" },
+    { href: "/landing", icon: HomeIcon, label: "Landing", isCounter: false },
+    { href: `/counter`, icon: LayoutGrid, label: "Counter", isCounter: true },
+    { href: "/settings", icon: SettingsIcon, label: "Settings", isCounter: false },
   ],
 } as const;
 
 export const MainDock = () => {
   const router = useRouter();
+  const user = useCashierUserContext();
+
+  const handleCounterClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    const stationId = user?.stationId;
+    const uid = user?.uid;
+    
+    if (!stationId || !uid) {
+      router.push("/counter");
+      return;
+    }
+
+    try {
+      const { data } = await api.get<CountersResponse>(`/counters/${stationId}`);
+      const counters = data.counters ?? [];
+      
+      // Find counter where cashierUid matches current user's uid
+      const assignedCounter = counters.find(counter => counter.cashierUid === uid);
+      
+      if (assignedCounter?.id) {
+        router.replace(`/counter?counterId=${assignedCounter.id}`);
+      } else {
+        router.push("/counter");
+      }
+    } catch (err) {
+      console.error("Failed to fetch counters:", err);
+      router.push("/counter");
+    }
+  };
   return (
     <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
       <TooltipProvider>
@@ -37,15 +70,27 @@ export const MainDock = () => {
             <DockIcon key={item.label}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link
-                    href={item.href}
-                    aria-label={item.label}
-                    className={cn(
-                      buttonVariants({ variant: "ghost", size: "icon" }),
-                      "size-12 rounded-full",
-                    )}>
-                    <item.icon className="size-4" />
-                  </Link>
+                  {item.isCounter ? (
+                    <button
+                      onClick={handleCounterClick}
+                      aria-label={item.label}
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "icon" }),
+                        "size-12 rounded-full",
+                      )}>
+                      <item.icon className="size-4" />
+                    </button>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      aria-label={item.label}
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "icon" }),
+                        "size-12 rounded-full",
+                      )}>
+                      <item.icon className="size-4" />
+                    </Link>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{item.label}</p>

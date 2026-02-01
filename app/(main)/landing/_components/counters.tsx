@@ -21,12 +21,22 @@ function isOccupied(counter: Counter): boolean {
   return counter.cashierUid != null && counter.cashierUid !== "";
 }
 
+function isOwnCounter(counter: Counter, userUid: string | undefined): boolean {
+  return (
+    userUid != null &&
+    counter.cashierUid != null &&
+    counter.cashierUid !== "" &&
+    counter.cashierUid === userUid
+  );
+}
+
 type CounterListProps = {
   query: string;
   onQueryChange: (value: string) => void;
   filteredCounters: Counter[];
   onOpenCounters: (station: Station) => void;
   onCounterClick?: (counter: Counter) => void;
+  currentUserUid?: string;
 };
 
 export function CounterList({
@@ -34,6 +44,7 @@ export function CounterList({
   onQueryChange,
   filteredCounters,
   onCounterClick,
+  currentUserUid,
 }: CounterListProps) {
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
@@ -64,6 +75,7 @@ export function CounterList({
             <AnimatedList className="w-full items-stretch">
               {filteredCounters.map((counter) => {
                 const occupied = isOccupied(counter);
+                const own = isOwnCounter(counter, currentUserUid);
                 return (
                   <div key={counter.id}>
                     <Card
@@ -84,12 +96,14 @@ export function CounterList({
                         <Badge
                           variant={occupied ? "secondary" : "outline"}
                           className={
-                            occupied
-                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                              : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                            own
+                              ? "bg-blue-500/15 text-blue-700 dark:text-blue-400"
+                              : occupied
+                                ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                                : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                           }
                         >
-                          {occupied ? "Occupied" : "Open"}
+                          {own ? "Your counter" : occupied ? "Occupied" : "Open"}
                         </Badge>
                       </CardContent>
                     </Card>
