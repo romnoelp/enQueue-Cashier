@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   collection,
   onSnapshot,
@@ -41,6 +41,7 @@ export default function CounterPage() {
 }
 
 function CounterPageInner() {
+  const router = useRouter();
   const user = useCashierUserContext();
   const searchParams = useSearchParams();
   const counterId = searchParams.get("counterId") ?? "";
@@ -246,6 +247,18 @@ function CounterPageInner() {
     }
   };
 
+  const handleExitCounter = async () => {
+    if (!counterId) return;
+    try {
+      await api.post(`/counters/${counterId}/exit`);
+      router.push("/landing");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to exit counter",
+      );
+    }
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-8">
       <Card>
@@ -341,6 +354,13 @@ function CounterPageInner() {
               </>
             )}
           </div>
+          <Button
+            onClick={handleExitCounter}
+            variant="outline"
+            size="lg"
+            className="mt-6 min-w-[140px]">
+            Exit Counter
+          </Button>
         </CardContent>
       </Card>
 
