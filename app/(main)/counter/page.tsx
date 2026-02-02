@@ -19,6 +19,7 @@ import {
 } from "@/components/animate-ui/components/headless/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 import { api } from "@/lib/config/api";
 import { db } from "@/lib/config/firebase";
@@ -60,6 +61,9 @@ function CounterPageInner() {
   const [waitingList, setWaitingList] = useState<Queue[]>([]);
   const [markNoShowDialogOpen, setMarkNoShowDialogOpen] = useState(false);
   const [markNoShowReason, setMarkNoShowReason] = useState("");
+  const [pendingAction, setPendingAction] = useState<
+    "start" | "complete" | "noShow" | "exit" | null
+  >(null);
   const didFetchCurrentServing = useRef(false);
 
   const stationId = counter?.stationId ?? station?.id;
@@ -206,6 +210,7 @@ function CounterPageInner() {
     const firstInQueue = waitingList[0];
     if (!firstInQueue) return;
     try {
+      setPendingAction("start");
       await api.post(`/queues/${firstInQueue.id}/start-service`, {
         counterId,
       });
@@ -214,12 +219,15 @@ function CounterPageInner() {
       setIsServing(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start service");
+    } finally {
+      setPendingAction(null);
     }
   };
 
   const handleCompleteService = async () => {
     if (!currentServingQueue) return;
     try {
+      setPendingAction("complete");
       await api.post(`/queues/${currentServingQueue.id}/complete`);
       setCurrentServingQueue(null);
       setCurrentQueueNumber(null);
@@ -228,12 +236,15 @@ function CounterPageInner() {
       setError(
         err instanceof Error ? err.message : "Failed to complete service",
       );
+    } finally {
+      setPendingAction(null);
     }
   };
 
   const handleMarkNoShow = async () => {
     if (!currentServingQueue) return;
     try {
+      setPendingAction("noShow");
       await api.post(`/queues/${currentServingQueue.id}/mark-no-show`, {
         reason: markNoShowReason,
       });
@@ -244,18 +255,21 @@ function CounterPageInner() {
       setIsServing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to mark no-show");
+    } finally {
+      setPendingAction(null);
     }
   };
 
   const handleExitCounter = async () => {
     if (!counterId) return;
     try {
+      setPendingAction("exit");
       await api.post(`/counters/${counterId}/exit`);
       router.push("/landing");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to exit counter",
-      );
+      setError(err instanceof Error ? err.message : "Failed to exit counter");
+    } finally {
+      setPendingAction(null);
     }
   };
 
@@ -331,24 +345,41 @@ function CounterPageInner() {
             {!isServing ? (
               <Button
                 onClick={handleStartService}
+                disabled={pendingAction != null}
                 size="lg"
-                className="min-w-[140px]">
-                Start Service
+                className="min-w-35">
+                {pendingAction === "start" ? (
+                  <span className="inline-flex items-center">
+                    <Spinner className="mr-2" />
+                    Starting…
+                  </span>
+                ) : (
+                  "Start Service"
+                )}
               </Button>
             ) : (
               <>
                 <Button
                   onClick={handleCompleteService}
+                  disabled={pendingAction != null}
                   size="lg"
                   variant="default"
-                  className="min-w-[140px]">
-                  Complete Service
+                  className="min-w-35">
+                  {pendingAction === "complete" ? (
+                    <span className="inline-flex items-center">
+                      <Spinner className="mr-2" />
+                      Completing…
+                    </span>
+                  ) : (
+                    "Complete Service"
+                  )}
                 </Button>
                 <Button
                   onClick={() => setMarkNoShowDialogOpen(true)}
+                  disabled={pendingAction != null}
                   size="lg"
                   variant="destructive"
-                  className="min-w-[140px]">
+                  className="min-w-35">
                   Mark No Show
                 </Button>
               </>
@@ -356,10 +387,18 @@ function CounterPageInner() {
           </div>
           <Button
             onClick={handleExitCounter}
+            disabled={pendingAction != null}
             variant="outline"
             size="lg"
-            className="mt-6 min-w-[140px]">
-            Exit Counter
+            className="mt-6 min-w-35">
+            {pendingAction === "exit" ? (
+              <span className="inline-flex items-center">
+                <Spinner className="mr-2" />
+                Exiting…
+              </span>
+            ) : (
+              "Exit Counter"
+            )}
           </Button>
         </CardContent>
       </Card>
@@ -367,10 +406,10 @@ function CounterPageInner() {
       <Dialog
         open={markNoShowDialogOpen}
         onClose={() => {
+          if (pendingAction === "noShow") return;
           setMarkNoShowDialogOpen(false);
           setMarkNoShowReason("");
-        }}
-      >
+        }}>
         <DialogPanel className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Mark No Show</DialogTitle>
@@ -378,8 +417,7 @@ function CounterPageInner() {
           <div className="space-y-2">
             <label
               htmlFor="mark-no-show-reason"
-              className="text-sm font-medium leading-none"
-            >
+              className="text-sm font-medium leading-none">
               Reason (optional)
             </label>
             <input
@@ -387,6 +425,7 @@ function CounterPageInner() {
               type="text"
               value={markNoShowReason}
               onChange={(e) => setMarkNoShowReason(e.target.value)}
+              disabled={pendingAction === "noShow"}
               placeholder="Add reason…"
               className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
@@ -394,14 +433,26 @@ function CounterPageInner() {
           <DialogFooter className="mt-4">
             <Button
               variant="outline"
+              disabled={pendingAction === "noShow"}
               onClick={() => {
+                if (pendingAction === "noShow") return;
                 setMarkNoShowDialogOpen(false);
                 setMarkNoShowReason("");
-              }}
-            >
+              }}>
               Cancel
             </Button>
-            <Button onClick={handleMarkNoShow}>Submit</Button>
+            <Button
+              onClick={handleMarkNoShow}
+              disabled={pendingAction === "noShow"}>
+              {pendingAction === "noShow" ? (
+                <span className="inline-flex items-center">
+                  <Spinner className="mr-2" />
+                  Submitting…
+                </span>
+              ) : (
+                "Submit"
+              )}
+            </Button>
           </DialogFooter>
         </DialogPanel>
       </Dialog>
